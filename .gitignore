@@ -1,0 +1,6 @@
+/node_modules
+/artifacts
+/cache
+
+.private_key_fuji
+.private_key_mainnet
