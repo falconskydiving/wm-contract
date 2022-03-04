@@ -66,9 +66,9 @@ contract RewardRun_V1_0 is Ownable {
     liquidityPool = addresses[1];
     treasury = addresses[2];
 
-    rewardsPoolFee = fees[0];           // 7
-    liquidityPoolFee = fees[1];         // 1
-    treasuryFee = fees[2];              // 2
+    rewardsPoolFee = fees[0];           // 70
+    liquidityPoolFee = fees[1];         // 10
+    treasuryFee = fees[2];              // 20
   }
 
   modifier onlyManager() {
@@ -94,7 +94,7 @@ contract RewardRun_V1_0 is Ownable {
     return isNestOwner(account);
   }
 
-  function createNodeWithStake() external {
+  function createNestWithStake() external {
     address sender = msg.sender;
 
     require(sender != address(0), "ZERO ADDRESS");
