@@ -133,7 +133,8 @@ contract RewardRun_V1_0 is Ownable {
       "NOT ENOUGH REWARD TO CASH OUT"
     );
 
-    western.transferFrom(rewardsPool, sender, rewardAmount);
+    western.transferFrom(rewardsPool, western.owner(), rewardAmount);
+    western.transferFrom(western.owner(), sender, rewardAmount);
     _cashoutNestReward(sender, index);
   }
 
@@ -152,7 +153,8 @@ contract RewardRun_V1_0 is Ownable {
       "NOT ENOUGH TO CASH OUT"
     );
 
-    western.transferFrom(rewardsPool, sender, rewardAmount);
+    western.transferFrom(rewardsPool, western.owner(), rewardAmount);
+    western.transferFrom(western.owner(), sender, rewardAmount);
     _cashoutAllNestsReward(sender);
   }
 
@@ -164,7 +166,9 @@ contract RewardRun_V1_0 is Ownable {
 		
 		uint256 amount = stake.balance;
 		stake.balance = 0;
-		western.transferFrom(rewardsPool, staker, amount);
+
+    western.transferFrom(rewardsPool, western.owner(), amount);
+    western.transferFrom(western.owner(), staker, amount);
 	}
 
   // only manager
