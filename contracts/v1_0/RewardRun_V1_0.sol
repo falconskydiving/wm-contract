@@ -78,44 +78,6 @@ contract RewardRun_V1_0 is Ownable {
 
   // external
 
-  function _getRewardAmountOf(address account)
-    private
-    view
-    returns (uint256)
-  {
-    require(isNestOwner(account), "GET REWARD OF: NO NEST OWNER");
-    uint256 nestsCount;
-    uint256 rewardCount = 0;
-
-    NestEntity[] storage nests = _nestsOfAccount[account];
-    nestsCount = _nestsCount[account];
-
-    NestEntity storage _nest;
-    for (uint256 i = 0; i < nestsCount; i++) {
-      _nest = nests[i];
-      rewardCount += dividendsOwing(_nest);
-    }
-
-    return rewardCount;
-  }
-
-  function _getRewardAmountOf(address account, uint256 index)
-    private
-    view
-    returns (uint256)
-  {
-    require(isNestOwner(account), "GET REWARD OF: NO NEST OWNER");
-    NestEntity[] storage nests = _nestsOfAccount[account];
-    uint256 numberOfNests = _nestsCount[account];
-    require(
-      numberOfNests > 0,
-      "CASHOUT ERROR: You don't have nests to cash-out"
-    );
-    NestEntity storage nest = _getNestByIndex(nests, index);
-    uint256 rewardNest = dividendsOwing(nest);
-    return rewardNest;
-  }
-
   function getNests(address account) external view returns (NestEntity[] memory) {
 		return _nestsOfAccount[account];
 	}
@@ -132,123 +94,6 @@ contract RewardRun_V1_0 is Ownable {
     return isNestOwner(account);
   }
 
-  // only manager
-
-  function addManager(address manager) external onlyManager {
-		_managers[manager] = true;
-	}
-
-  function updateNestLimit(uint256 newNestLimit) external onlyManager {
-    nestLimit = newNestLimit;
-  }
-
-  function _createStake(uint256 amount) private {
-		address staker = msg.sender;
-		
-		uint256 stakeIndex = totalStakesCreated++;
-		stakesofAccount[staker].push(
-			Stake({
-        index: stakeIndex,
-        balance: amount,
-				creationTime: block.timestamp
-			})
-		);
-	}
-
-  function _createNest(address account) private onlyManager {
-    require(_nestsCount[account] < nestLimit, "Can't create nests over 100");
-    uint256 rewardsPerMinute;
-    
-    // check if a staker purchase a nft
-    // ...
-
-    rewardsPerMinute = rewardsPerMinuteNest;
-
-    _nestsOfAccount[account].push(
-      NestEntity({
-        creationTime: block.timestamp,
-        lastClaimTime: block.timestamp,
-        rewardsPerMinute: rewardsPerMinute,
-        created: true,
-        isStake: true
-      })
-    );
-
-    totalNestsCreated++;
-    _nestsCount[account] ++;
-		emit NestCreated(account, _nestsOfAccount[account].length, totalNestsCreated);
-  }
-
-  function _cashoutNestReward(address account, uint256 index) private onlyManager {
-    NestEntity[] storage nests = _nestsOfAccount[account];
-    uint256 numberOfNests = _nestsCount[account];
-    require(
-      numberOfNests > 0,
-      "CASHOUT ERROR: You don't have nests to cash-out"
-    );
-    NestEntity storage nest = _getNestByIndex(nests, index);
-    nest.lastClaimTime = block.timestamp;
-  }
-
-  function _cashoutAllNestsReward(address account) private onlyManager
-  {
-    NestEntity[] storage nests = _nestsOfAccount[account];
-    uint256 nestsCount = _nestsCount[account];
-    require(nestsCount > 0, "NEST: NO NEST OWNER");
-
-    NestEntity storage _nest;
-    for (uint256 i = 0; i < nestsCount; i++) {
-      _nest = nests[i];
-      _nest.lastClaimTime = block.timestamp;
-    }
-  }
-
-  function _changeNestPrice(uint256 newNestPrice) external onlyManager {
-    nestPrice = newNestPrice;
-  }
-
-  function _changeRewardsPerMinute(uint256 newRewards) external onlyManager {
-    rewardsPerMinuteNest = newRewards;
-  }
-
-  function _changeClaimInterval(uint256 newInterval) external onlyManager {
-    claimInterval = newInterval;
-  }
-
-  // Private
-
-  function dividendsOwing(NestEntity memory nest) private view returns (uint256 availableRewards) {
-		uint256 currentTime = block.timestamp;
-
-		uint256 minutesPassed = (currentTime).sub(nest.lastClaimTime).div(claimInterval);
-    if (nest.lastClaimTime == nest.creationTime) {
-      return uint256(0);
-    } else {
-      return minutesPassed.mul(nest.rewardsPerMinute);
-    }
-	}
-
-  function _getNestByIndex(
-    NestEntity[] storage nests,
-    uint256 index
-  ) private view returns (NestEntity storage) {
-    uint256 numberOfNests = nests.length;
-
-    require(
-      numberOfNests > 0,
-      "CASHOUT ERROR: You don't have nests to cash-out"
-    );
-    require(index < numberOfNests, "CASHOUT ERROR: Invalid nest");
-
-    return nests[index];
-  }
-
-  function isNestOwner(address account) private view returns (bool) {
-    return _nestsCount[account] > 0;
-  }
-
-  // WESTERN
-  
   function createNodeWithStake() external {
     address sender = msg.sender;
 
@@ -306,7 +151,7 @@ contract RewardRun_V1_0 is Ownable {
     _cashoutAllNestsReward(sender);
   }
 
-  function withdrawStaking(uint256 index) public {
+  function withdrawStaking(uint256 index) external {
 		address staker = msg.sender;
 
 		Stake storage stake = stakesofAccount[staker][index];
@@ -316,4 +161,157 @@ contract RewardRun_V1_0 is Ownable {
 		stake.balance = 0;
 		western.transferFrom(rewardsPool, staker, amount);
 	}
+
+  // only manager
+
+  function addManager(address manager) external onlyManager {
+		_managers[manager] = true;
+	}
+
+  function updateNestLimit(uint256 newNestLimit) external onlyManager {
+    nestLimit = newNestLimit;
+  }
+
+  function _createStake(uint256 amount) private {
+		address staker = msg.sender;
+		
+		uint256 stakeIndex = totalStakesCreated++;
+		stakesofAccount[staker].push(
+			Stake({
+        index: stakeIndex,
+        balance: amount,
+				creationTime: block.timestamp
+			})
+		);
+	} 
+
+  function _changeNestPrice(uint256 newNestPrice) external onlyManager {
+    nestPrice = newNestPrice;
+  }
+
+  function _changeRewardsPerMinute(uint256 newRewards) external onlyManager {
+    rewardsPerMinuteNest = newRewards;
+  }
+
+  function _changeClaimInterval(uint256 newInterval) external onlyManager {
+    claimInterval = newInterval;
+  }
+
+  // Private
+
+  function _getRewardAmountOf(address account)
+    private
+    view
+    returns (uint256)
+  {
+    require(isNestOwner(account), "GET REWARD OF: NO NEST OWNER");
+    uint256 nestsCount;
+    uint256 rewardCount = 0;
+
+    NestEntity[] storage nests = _nestsOfAccount[account];
+    nestsCount = _nestsCount[account];
+
+    NestEntity storage _nest;
+    for (uint256 i = 0; i < nestsCount; i++) {
+      _nest = nests[i];
+      rewardCount += dividendsOwing(_nest);
+    }
+
+    return rewardCount;
+  }
+
+  function _getRewardAmountOf(address account, uint256 index)
+    private
+    view
+    returns (uint256)
+  {
+    require(isNestOwner(account), "GET REWARD OF: NO NEST OWNER");
+    NestEntity[] storage nests = _nestsOfAccount[account];
+    uint256 numberOfNests = _nestsCount[account];
+    require(
+      numberOfNests > 0,
+      "CASHOUT ERROR: You don't have nests to cash-out"
+    );
+    NestEntity storage nest = _getNestByIndex(nests, index);
+    uint256 rewardNest = dividendsOwing(nest);
+    return rewardNest;
+  }
+
+  function _createNest(address account) private onlyManager {
+    require(_nestsCount[account] < nestLimit, "Can't create nests over 100");
+    uint256 rewardsPerMinute;
+    
+    // check if a staker purchase a nft
+    // ...
+
+    rewardsPerMinute = rewardsPerMinuteNest;
+
+    _nestsOfAccount[account].push(
+      NestEntity({
+        creationTime: block.timestamp,
+        lastClaimTime: block.timestamp,
+        rewardsPerMinute: rewardsPerMinute,
+        created: true,
+        isStake: true
+      })
+    );
+
+    totalNestsCreated++;
+    _nestsCount[account] ++;
+		emit NestCreated(account, _nestsOfAccount[account].length, totalNestsCreated);
+  }
+
+  function _cashoutNestReward(address account, uint256 index) private onlyManager {
+    NestEntity[] storage nests = _nestsOfAccount[account];
+    uint256 numberOfNests = _nestsCount[account];
+    require(
+      numberOfNests > 0,
+      "CASHOUT ERROR: You don't have nests to cash-out"
+    );
+    NestEntity storage nest = _getNestByIndex(nests, index);
+    nest.lastClaimTime = block.timestamp;
+  }
+
+  function _cashoutAllNestsReward(address account) private onlyManager
+  {
+    NestEntity[] storage nests = _nestsOfAccount[account];
+    uint256 nestsCount = _nestsCount[account];
+    require(nestsCount > 0, "NEST: NO NEST OWNER");
+
+    NestEntity storage _nest;
+    for (uint256 i = 0; i < nestsCount; i++) {
+      _nest = nests[i];
+      _nest.lastClaimTime = block.timestamp;
+    }
+  }
+
+  function dividendsOwing(NestEntity memory nest) private view returns (uint256 availableRewards) {
+		uint256 currentTime = block.timestamp;
+
+		uint256 minutesPassed = (currentTime).sub(nest.lastClaimTime).div(claimInterval);
+    if (nest.lastClaimTime == nest.creationTime) {
+      return uint256(0);
+    } else {
+      return minutesPassed.mul(nest.rewardsPerMinute);
+    }
+	}
+
+  function _getNestByIndex(
+    NestEntity[] storage nests,
+    uint256 index
+  ) private view returns (NestEntity storage) {
+    uint256 numberOfNests = nests.length;
+
+    require(
+      numberOfNests > 0,
+      "CASHOUT ERROR: You don't have nests to cash-out"
+    );
+    require(index < numberOfNests, "CASHOUT ERROR: Invalid nest");
+
+    return nests[index];
+  }
+
+  function isNestOwner(address account) private view returns (bool) {
+    return _nestsCount[account] > 0;
+  }
 }
