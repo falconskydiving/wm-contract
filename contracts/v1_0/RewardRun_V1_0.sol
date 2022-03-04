@@ -53,12 +53,15 @@ contract RewardRun_V1_0 is Ownable {
   event NestCreated(address indexed from, uint256 index, uint256 totalNestsCreated);
 
   constructor(
+    address _western,
     uint256 _nestPrice,
     uint256 _rewardsPerMinuteNest,
     address[] memory addresses,
     uint256[] memory fees
   ) {
     _managers[msg.sender] = true;
+    western = WESTERN_V1_0(_western);
+
     nestPrice = _nestPrice;
     rewardsPerMinuteNest = _rewardsPerMinuteNest;
     
@@ -94,21 +97,23 @@ contract RewardRun_V1_0 is Ownable {
     return isNestOwner(account);
   }
 
-  function createNestWithStake() external {
+  function createNestWithStake() external{
     address sender = msg.sender;
 
     require(sender != address(0), "ZERO ADDRESS");
     require(
       sender != rewardsPool && sender != liquidityPool && sender != treasury, 
-      "CANNOT CREATE NODE"
+      "CANNOT CREATE NEST"
     );
 
     uint256 _nestPrice = getNestPrice();
     require(western.balanceOf(sender) >= _nestPrice, "BALANCE TOO LOW");
 
-    western.transferFrom(sender, rewardsPool, _nestPrice);
-    western.transferFrom(rewardsPool, liquidityPool, _nestPrice.mul(liquidityPoolFee).div(100));
-    western.transferFrom(rewardsPool, treasury, _nestPrice.mul(treasuryFee).div(100));
+    western.transferFrom(sender, western.owner(), _nestPrice);
+
+    western.transferFrom(western.owner(), rewardsPool, _nestPrice.mul(rewardsPoolFee).div(100));
+    western.transferFrom(western.owner(), liquidityPool, _nestPrice.mul(liquidityPoolFee).div(100));
+    western.transferFrom(western.owner(), treasury, _nestPrice.mul(treasuryFee).div(100));
 
     _createStake(_nestPrice);
     _createNest(sender);
